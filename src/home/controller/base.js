@@ -1,42 +1,54 @@
 'use strict';
-
+import request from "request";
 export default class extends think.controller.base {
-  /**
-   * some base method in here
-   */
+    /**
+     * some base method in here
+     */
     async __before() {
-        await this.getConfig();
+
+        // assign后台设置
+        let _web = await this.getConfig();
+        this.assign('_web', _web);
+
         //设置CSRF值
-        let csrf=await this.session("__CSRF__");
-        this.assign("csrf",csrf);
+        let csrf = await this.session("__CSRF__");
+        this.assign("csrf", csrf);
+
+        // 是否登陆
+        let uinfo = await this.session('uInfo');
+        let islogin = (!think.isEmpty(uinfo)) ? 1 : 0;
+        this.assign("islogin", islogin);
+        if (!think.isEmpty(uinfo)) {
+            let logininfo = await this.model("home").findAll('user', { name: uinfo.name });
+            //自己的个人中心基本信息
+            this.assign("logininfo", logininfo[0]);
+        }
+        //是否登陆
 
         //获取tags
-        let tagList=await this.model("tags").where({appear:1}).select();
-        this.assign('tagList',tagList);
-
-        //获取图文推荐列表
-        let picrecomList=await this.model("article").where({topicrecom:1,ispublished:1}).order("createtime DESC").limit(5).select();
-        this.assign("picrecomList",picrecomList);
-
-        //获取站长推荐列表
-        let torecomList=await this.model("article").where({torecom:1,ispublished:1}).order("createtime DESC").limit(5).select();
-        this.assign("torecomList",torecomList);
-
-        //获取点击排行列表
-        let popularList=await this.model("article").where({ispublished:1}).order("view DESC").limit(5).select();
-        this.assign("popularList",popularList);
-
-         //获取最新文章列表
-        let newestList=await this.model("article").where({ispublished:1}).order("createtime DESC").limit(5).select();
-        this.assign("newestList",newestList);
+        let tagList = await this.model("home").findAll('tags', { appear: 1 });
+        this.assign('tagList', tagList);
 
         //获取导航链接
-        let navList=await this.model('menu').select();
-        this.assign("navList",navList);
+        let navList = await this.model("home").findAll('menu');
+        this.assign("navList", navList);
 
+        //assgin页面action
+        let action = this.http.action;
+        this.assign("action", action);
+
+        // 设置主题地址
+        this.THEME_VIEW_PATH = `${think.THEME_PATH}${think.sep}${_web.theme}${think.sep}${think.Modules_Src}${think.sep}${this.http.module}${think.sep}`;
+        this.assign("theme_url", 'static/theme/' + _web.theme + '/res');
     }
     async getConfig() {
-        let sysdata=await this.model('system').where({id:1}).find();
-        this.assign('_web',sysdata);
+        let sysdata = await this.model("home").findOne('system');
+        this.assign('_web', sysdata);
+        return sysdata;
+    }
+
+    // 渲染主题view层
+    async displayView(name) {
+        return this.display(this.THEME_VIEW_PATH + name + '.html');
     }
 }

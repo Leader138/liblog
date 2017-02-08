@@ -1,6 +1,8 @@
 app
 node_modules
 runtime
+.git
 npm-debug.log
 src/common/config/db.js
-pm2.json
+/src/common/config/config.js
+/src/common/config/db.js
